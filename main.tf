@@ -23,6 +23,42 @@ resource "azurerm_resource_group" "int3" {
     timeouts {}
 }
 
+resource "azurerm_network_security_group" "PrivGroup" {
+  name                = "NoInternet"
+  location            = azurerm_resource_group.int3.location
+  resource_group_name = azurerm_resource_group.int3.name
+
+  security_rule {
+    name                       = "InternetInb"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "InternetOutb"
+    priority                   = 110
+    direction                  = "Outbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "Internet"
+  }
+
+
+  tags = {
+    environment = "Dev"
+  }
+}
+
+
 resource "azurerm_virtual_network" "Pub" {
   name                = "Pub"
   resource_group_name =  azurerm_resource_group.int3.name
@@ -66,6 +102,11 @@ resource "azurerm_subnet" "internal" {
   resource_group_name  = azurerm_resource_group.int3.name
   virtual_network_name = azurerm_virtual_network.Priv.name
   address_prefixes     = ["10.1.4.0/24"]
+}
+
+resource "azurerm_subnet_network_security_group_association" "assoc" {
+  subnet_id                 = azurerm_subnet.internal.id
+  network_security_group_id = azurerm_network_security_group.PrivGroup.id
 }
 
 resource "azurerm_network_interface" "internalnic" {
